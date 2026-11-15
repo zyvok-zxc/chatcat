@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>شات كات</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; color: #fff; font-family: Tahoma, Arial, sans-serif; min-height: 100vh; display: flex; justify-content: center; }
+  .app { width: 100%; max-width: 480px; padding: 24px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  h1 { text-align: center; margin: 20px 0; font-size: 28px; }
+  h2 { margin-bottom: 16px; }
+  .logo { font-size: 90px; text-align: center; margin-top: 30px; }
+  p { line-height: 1.8; margin-bottom: 14px; color: #ddd; }
+  button { width: 100%; padding: 14px; margin-top: 12px; border-radius: 12px; border: 2px solid #fff; background: #fff; color: #000; font-size: 18px; cursor: pointer; }
+  button.secondary { background: #000; color: #fff; }
+  button:disabled { opacity: 0.4; }
+  input, textarea, select { width: 100%; padding: 12px; margin-bottom: 14px; border-radius: 10px; border: 2px solid #fff; background: #000; color: #fff; font-size: 16px; }
+  label { display: block; margin-bottom: 6px; }
+  .terms { background: #111; border: 1px solid #444; border-radius: 12px; padding: 14px; height: 300px; overflow-y: auto; font-size: 14px; }
+  .terms li { margin-bottom: 10px; margin-right: 18px; color: #ddd; line-height: 1.7; }
+  .check { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .check input { width: 22px; height: 22px; margin: 0; }
+  .card { border: 2px solid #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; cursor: pointer; }
+  .card.selected { background: #fff; color: #000; }
+  .card.selected p { color: #000; }
+  .card.locked { opacity: 0.45; cursor: not-allowed; }
+</style> 
+</head>
+<body>
+<div class="app">
+
+  <div class="screen active" id="s1">
+    <div class="logo">🐈‍⬛</div>
+    <h1>شات كات</h1>
+    <p style="text-align:center">قطك الخاص المدعوم بالذكاء الاصطناعي. تختار اسمه وعمره وقصته وشخصيته وشكله، ويتحدث معك ويتطور مع الوقت.</p>
+    <p style="text-align:center">تنبيه: ردود القط تأتي من ذكاء اصطناعي وليست من إنسان.</p>
+    <button onclick="go('s2')">ابدأ</button>
+  </div>
+
+  <div class="screen" id="s2">
+    <h2>الشروط والأحكام</h2>
+    <div class="terms">
+      <ol>
+        <li>شات كات تطبيق ترفيهي يعمل بالذكاء الاصطناعي. جميع الردود يولدها نظام آلي وليست صادرة عن إنسان.</li>
+        <li>قد تحتوي الردود على معلومات خاطئة أو غير دقيقة أو غير مناسبة. لا تعتمد عليها في أي قرار.</li>
+        <li>التطبيق ليس بديلاً عن الأطباء أو المعالجين النفسيين أو المحامين أو المستشارين الماليين، وما يقوله القط ليس نصيحة طبية أو نفسية أو قانونية أو مالية.</li>
+        <li>التطبيق ليس بديلاً عن العلاقات والصداقات الحقيقية. لا تعتمد عليه كمصدر وحيد للدعم العاطفي.</li>
+        <li>إذا كنت تمر بأزمة أو تفكر في إيذاء نفسك، فتوقف عن استخدام التطبيق وتواصل فوراً مع خدمات الطوارئ أو مختص أو شخص تثق به.</li>
+        <li>يجب ألا يقل عمرك عن 18 سنة لاستخدام التطبيق، أو أن تستخدمه بموافقة وإشراف ولي أمرك.</li>
+        <li>أنت مسؤول مسؤولية كاملة عن طريقة استخدامك للتطبيق وعن أي قرارات أو أفعال تقوم بها بناء على المحادثات.</li>
+        <li>يمنع استخدام التطبيق في أي نشاط غير قانوني أو مؤذٍ أو مسيء، ويحق لنا إيقاف أي حساب يخالف ذلك.</li>
+        <li>في أقصى حد يسمح به القانون، لا يتحمل مالك التطبيق أي مسؤولية عن أي أضرار مباشرة أو غير مباشرة ناتجة عن استخدامه.</li>
+        <li>قد نغير هذه الشروط في أي وقت، واستمرارك في الاستخدام يعني موافقتك على النسخة المحدثة.</li>
+      </ol>
+    </div>
+    <div class="check">
+      <input type="checkbox" id="agree" onchange="document.getElementById('agreeBtn').disabled = !this.checked">
+      <label for="agree" style="margin:0">قرأت الشروط وأوافق عليها</label>
+    </div>
+    <button id="agreeBtn" disabled onclick="go('s3')">أوافق وأتابع</button>
+    <button class="secondary" onclick="go('s1')">رجوع</button>
+  </div>
+
+  <div class="screen" id="s3">
+    <h2>اصنع قطك</h2>
+    <label>اسم القط</label>
+    <input id="catName" placeholder="مثال: ميمو">
+    <label>عمر القط</label>
+    <input id="catAge" type="number" min="0" placeholder="مثال: 3">
+    <label>شخصية القط</label>
+    <select id="catPers">
+      <option>لطيف وحنون</option>
+      <option>مشاغب ومرح</option>
+      <option>هادئ وحكيم</option>
+      <option>متكبر وساخر</option>
+      <option>فضولي وذكي</option>
+    </select>
+    <label>قصة القط</label>
+    <textarea id="catStory" rows="4" placeholder="اكتب قصة قطك..."></textarea>
+    <button onclick="saveCat()">التالي</button>
+  </div>
+
+  <div class="screen" id="s4">
+    <h2>اختر شكل القط</h2>
+    <div class="card" id="f1" onclick="pick('f1','سلالات حقيقية')">
+      <h3>🐱 سلالات حقيقية</h3>
+      <p>اختر من سلالات القطط الموجودة في الواقع.</p>
+    </div>
+    <div class="card" id="f2" onclick="pick('f2','خيالي')">
+      <h3>🦄 خيالي</h3>
+      <p>ألوان غريبة وأشكال خرافية.</p>
+    </div>
+    <div class="card locked" id="f3">
+      <h3>🔒 قطط المهام</h3>
+      <p>تُفتح عند إكمال المهام فقط.</p>
+    </div>
+    <button id="finishBtn" disabled onclick="finish()">تم</button>
+  </div>
+
+  <div class="screen" id="s5">
+    <div class="logo">🐈‍⬛</div>
+    <h1 id="hello"></h1>
+    <p style="text-align:center">قطك جاهز! في الخطوة القادمة نضيف المحادثة الذكية.</p>
+  </div>
+
+</div>
+
+<script>
+  var cat = { name:'', age:'', pers:'', story:'', look:'' };
+  function go(id) {
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+  function saveCat() {
+    var n = document.getElementById('catName').value.trim();
+    if (!n) { alert('اكتب اسم القط أولاً'); return; }
+    cat.name = n;
+    cat.age = document.getElementById('catAge').value;
+    cat.pers = document.getElementById('catPers').value;
+    cat.story = document.getElementById('catStory').value;
+    go('s4');
+  }
+  function pick(id, name) {
+    document.getElementById('f1').classList.remove('selected');
+    document.getElementById('f2').classList.remove('selected');
+    document.getElementById(id).classList.add('selected');
+    cat.look = name;
+    document.getElementById('finishBtn').disabled = false;
+  }
+  function finish() {
+    localStorage.setItem('chatcat', JSON.stringify(cat));
+    document.getElementById('hello').textContent = 'أهلاً! أنا ' + cat.name;
+    go('s5');
+  }
+</script>
+</body>
+</html>
