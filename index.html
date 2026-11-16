@@ -27,7 +27,21 @@
   .card.selected { background: #fff; color: #000; }
   .card.selected p { color: #000; }
   .card.locked { opacity: 0.45; cursor: not-allowed; }
-</style> 
+  #s5 { padding: 0; }
+  #s5.active { display: flex; flex-direction: column; height: calc(100vh - 48px); }
+  .chat-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #333; }
+  .chat-head .face { font-size: 40px; }
+  .chat-head .info small { color: #888; display: block; }
+  .msgs { flex: 1; overflow-y: auto; padding: 14px 0; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 16px; margin-bottom: 10px; line-height: 1.7; white-space: pre-wrap; }
+  .msg.user { background: #fff; color: #000; margin-right: auto; margin-left: 0; }
+  .msg.cat { background: #1a1a1a; color: #fff; border: 1px solid #333; margin-left: auto; margin-right: 0; }
+  .msg.typing { color: #888; }
+  .chat-input { display: flex; gap: 8px; padding-top: 8px; }
+  .chat-input input { margin: 0; flex: 1; }
+  .chat-input button { width: auto; margin: 0; padding: 12px 20px; }
+  .limit { text-align: center; color: #888; font-size: 13px; padding: 6px 0; }
+</style>
 </head>
 <body>
 <div class="app">
@@ -101,15 +115,26 @@
   </div>
 
   <div class="screen" id="s5">
-    <div class="logo">🐈‍⬛</div>
-    <h1 id="hello"></h1>
-    <p style="text-align:center">قطك جاهز! في الخطوة القادمة نضيف المحادثة الذكية.</p>
+    <div class="chat-head">
+      <div class="face">🐈‍⬛</div>
+      <div class="info"><strong id="hName"></strong><small id="hSub"></small></div>
+    </div>
+    <div class="msgs" id="msgs"></div>
+    <div class="limit" id="limitInfo"></div>
+    <div class="chat-input">
+      <input id="chatInput" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button id="sendBtn" onclick="sendMsg()">إرسال</button>
+    </div>
   </div>
 
 </div>
 
 <script>
+  var API_URL = 'https://chatcat-api.zyvok-cm.workers.dev';
+  var DAILY_LIMIT = 20;
   var cat = { name:'', age:'', pers:'', story:'', look:'' };
+  var history = [];
+
   function go(id) {
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
     document.getElementById(id).classList.add('active');
@@ -132,10 +157,77 @@
     document.getElementById('finishBtn').disabled = false;
   }
   function finish() {
+    cat.created = Date.now();
     localStorage.setItem('chatcat', JSON.stringify(cat));
-    document.getElementById('hello').textContent = 'أهلاً! أنا ' + cat.name;
+    startChat();
+  }
+  function startChat() {
+    document.getElementById('hName').textContent = cat.name;
+    document.getElementById('hSub').textContent = cat.pers + ' • ' + cat.age + ' سنوات';
+    document.getElementById('msgs').innerHTML = '';
+    history = [];
+    addMsg('cat', 'مياو! أنا ' + cat.name + '، سعيد إني شفتك. وش أخبارك؟');
+    updateLimit();
     go('s5');
   }
+  function addMsg(role, text) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + role;
+    d.textContent = text;
+    var box = document.getElementById('msgs');
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+    return d;
+  }
+  function todayKey() {
+    var d = new Date();
+    return 'cc_count_' + d.getFullYear() + '_' + d.getMonth() + '_' + d.getDate();
+  }
+  function getCount() { return parseInt(localStorage.getItem(todayKey()) || '0', 10); }
+  function updateLimit() {
+    var left = Math.max(0, DAILY_LIMIT - getCount());
+    document.getElementById('limitInfo').textContent = 'الرسائل المتبقية اليوم: ' + left;
+  }
+  async function sendMsg() {
+    var input = document.getElementById('chatInput');
+    var text = input.value.trim();
+    if (!text) return;
+    if (getCount() >= DAILY_LIMIT) {
+      addMsg('cat', 'مياو... خلصت رسائلك المجانية لليوم. ارجع لي بكرة، أو انتظر الاشتراك المميز قريباً.');
+      return;
+    }
+    input.value = '';
+    addMsg('user', text);
+    var typing = addMsg('cat typing', '...');
+    document.getElementById('sendBtn').disabled = true;
+    try {
+      var res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cat: cat, history: history, message: text })
+      });
+      var data = await res.json();
+      typing.remove();
+      var reply = data.reply || 'مياو... ما قدرت أرد الحين.';
+      addMsg('cat', reply);
+      history.push({ role: 'user', text: text });
+      history.push({ role: 'cat', text: reply });
+      localStorage.setItem(todayKey(), String(getCount() + 1));
+      updateLimit();
+    } catch (e) {
+      typing.remove();
+      addMsg('cat', 'مياو... يبدو إن الإنترنت ضعيف، جرب مرة ثانية.');
+    }
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  (function init() {
+    var saved = localStorage.getItem('chatcat');
+    if (saved) {
+      try { cat = JSON.parse(saved); if (cat.name) { startChat(); } } catch (e) {}
+    }
+  })();
 </script>
 </body>
 </html>
+
