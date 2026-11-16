@@ -10,6 +10,7 @@
   .app { width: 100%; max-width: 480px; padding: 24px; }
   .screen { display: none; }
   .screen.active { display: block; }
+  .screen.chat.active { display: flex; flex-direction: column; height: calc(100vh - 48px); height: calc(100dvh - 48px); }
   h1 { text-align: center; margin: 20px 0; font-size: 28px; }
   h2 { margin-bottom: 16px; }
   .logo { font-size: 90px; text-align: center; margin-top: 30px; }
@@ -27,20 +28,17 @@
   .card.selected { background: #fff; color: #000; }
   .card.selected p { color: #000; }
   .card.locked { opacity: 0.45; cursor: not-allowed; }
-  #s5 { padding: 0; }
-  #s5.active { display: flex; flex-direction: column; height: calc(100vh - 48px); }
-  .chat-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #333; }
-  .chat-head .face { font-size: 40px; }
-  .chat-head .info small { color: #888; display: block; }
-  .msgs { flex: 1; overflow-y: auto; padding: 14px 0; }
-  .msg { max-width: 85%; padding: 10px 14px; border-radius: 16px; margin-bottom: 10px; line-height: 1.7; white-space: pre-wrap; }
-  .msg.user { background: #fff; color: #000; margin-right: auto; margin-left: 0; }
-  .msg.cat { background: #1a1a1a; color: #fff; border: 1px solid #333; margin-left: auto; margin-right: 0; }
-  .msg.typing { color: #888; }
-  .chat-input { display: flex; gap: 8px; padding-top: 8px; }
-  .chat-input input { margin: 0; flex: 1; }
-  .chat-input button { width: auto; margin: 0; padding: 12px 20px; }
-  .limit { text-align: center; color: #888; font-size: 13px; padding: 6px 0; }
+  .head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #333; }
+  .head .nm { font-size: 20px; font-weight: bold; }
+  .head .inf { font-size: 13px; color: #aaa; }
+  .head button { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
+  #msgs { flex: 1; overflow-y: auto; padding: 14px 0; display: flex; flex-direction: column; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 16px; margin-bottom: 10px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.me { background: #fff; color: #000; align-self: flex-start; }
+  .msg.cat { background: #1f1f1f; color: #fff; align-self: flex-end; border: 1px solid #333; }
+  .row { display: flex; gap: 8px; padding-top: 10px; }
+  .row input { flex: 1; margin: 0; }
+  .row button { width: auto; margin: 0; padding: 0 20px; }
 </style>
 </head>
 <body>
@@ -74,16 +72,16 @@
       <input type="checkbox" id="agree" onchange="document.getElementById('agreeBtn').disabled = !this.checked">
       <label for="agree" style="margin:0">قرأت الشروط وأوافق عليها</label>
     </div>
-    <button id="agreeBtn" disabled onclick="go('s3')">أوافق وأتابع</button>
+    <button id="agreeBtn" disabled onclick="agree()">أوافق وأتابع</button>
     <button class="secondary" onclick="go('s1')">رجوع</button>
   </div>
 
   <div class="screen" id="s3">
     <h2>اصنع قطك</h2>
     <label>اسم القط</label>
-    <input id="catName" placeholder="مثال: ميمو">
+    <input id="catName" maxlength="20" placeholder="مثال: ميمو">
     <label>عمر القط</label>
-    <input id="catAge" type="number" min="0" placeholder="مثال: 3">
+    <input id="catAge" type="number" min="1" max="100" placeholder="مثال: 3">
     <label>شخصية القط</label>
     <select id="catPers">
       <option>لطيف وحنون</option>
@@ -93,7 +91,7 @@
       <option>فضولي وذكي</option>
     </select>
     <label>قصة القط</label>
-    <textarea id="catStory" rows="4" placeholder="اكتب قصة قطك..."></textarea>
+    <textarea id="catStory" rows="4" maxlength="500" placeholder="اكتب قصة قطك..."></textarea>
     <button onclick="saveCat()">التالي</button>
   </div>
 
@@ -114,120 +112,199 @@
     <button id="finishBtn" disabled onclick="finish()">تم</button>
   </div>
 
-  <div class="screen" id="s5">
-    <div class="chat-head">
-      <div class="face">🐈‍⬛</div>
-      <div class="info"><strong id="hName"></strong><small id="hSub"></small></div>
+  <div class="screen chat" id="s5">
+    <div class="head">
+      <div>
+        <div class="nm" id="chName"></div>
+        <div class="inf" id="chInfo"></div>
+      </div>
+      <button class="secondary" onclick="resetCat()">قط جديد</button>
     </div>
-    <div class="msgs" id="msgs"></div>
-    <div class="limit" id="limitInfo"></div>
-    <div class="chat-input">
-      <input id="chatInput" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendMsg()">
-      <button id="sendBtn" onclick="sendMsg()">إرسال</button>
+    <div id="msgs"></div>
+    <div class="row">
+      <input id="inp" maxlength="500" placeholder="اكتب لقطك...">
+      <button id="sendBtn" onclick="send()">إرسال</button>
     </div>
   </div>
 
 </div>
 
 <script>
-  var API_URL = 'https://chatcat-api.zyvok-cm.workers.dev';
-  var DAILY_LIMIT = 20;
-  var cat = { name:'', age:'', pers:'', story:'', look:'' };
+  var API_URL = "https://chatcat-api.zyvok-cm.workers.dev";
+  var LIMIT = 20;
+  var cat = null;
   var history = [];
+  var busy = false;
+
+  function $(id) { return document.getElementById(id); }
 
   function go(id) {
-    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-    document.getElementById(id).classList.add('active');
-    window.scrollTo(0,0);
-  }
-  function saveCat() {
-    var n = document.getElementById('catName').value.trim();
-    if (!n) { alert('اكتب اسم القط أولاً'); return; }
-    cat.name = n;
-    cat.age = document.getElementById('catAge').value;
-    cat.pers = document.getElementById('catPers').value;
-    cat.story = document.getElementById('catStory').value;
-    go('s4');
-  }
-  function pick(id, name) {
-    document.getElementById('f1').classList.remove('selected');
-    document.getElementById('f2').classList.remove('selected');
-    document.getElementById(id).classList.add('selected');
-    cat.look = name;
-    document.getElementById('finishBtn').disabled = false;
-  }
-  function finish() {
-    cat.created = Date.now();
-    localStorage.setItem('chatcat', JSON.stringify(cat));
-    startChat();
-  }
-  function startChat() {
-    document.getElementById('hName').textContent = cat.name;
-    document.getElementById('hSub').textContent = cat.pers + ' • ' + cat.age + ' سنوات';
-    document.getElementById('msgs').innerHTML = '';
-    history = [];
-    addMsg('cat', 'مياو! أنا ' + cat.name + '، سعيد إني شفتك. وش أخبارك؟');
-    updateLimit();
-    go('s5');
-  }
-  function addMsg(role, text) {
-    var d = document.createElement('div');
-    d.className = 'msg ' + role;
-    d.textContent = text;
-    var box = document.getElementById('msgs');
-    box.appendChild(d);
-    box.scrollTop = box.scrollHeight;
-    return d;
-  }
-  function todayKey() {
-    var d = new Date();
-    return 'cc_count_' + d.getFullYear() + '_' + d.getMonth() + '_' + d.getDate();
-  }
-  function getCount() { return parseInt(localStorage.getItem(todayKey()) || '0', 10); }
-  function updateLimit() {
-    var left = Math.max(0, DAILY_LIMIT - getCount());
-    document.getElementById('limitInfo').textContent = 'الرسائل المتبقية اليوم: ' + left;
-  }
-  async function sendMsg() {
-    var input = document.getElementById('chatInput');
-    var text = input.value.trim();
-    if (!text) return;
-    if (getCount() >= DAILY_LIMIT) {
-      addMsg('cat', 'مياو... خلصت رسائلك المجانية لليوم. ارجع لي بكرة، أو انتظر الاشتراك المميز قريباً.');
-      return;
-    }
-    input.value = '';
-    addMsg('user', text);
-    var typing = addMsg('cat typing', '...');
-    document.getElementById('sendBtn').disabled = true;
-    try {
-      var res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cat: cat, history: history, message: text })
-      });
-      var data = await res.json();
-      typing.remove();
-      var reply = data.reply || 'مياو... ما قدرت أرد الحين.';
-      addMsg('cat', reply);
-      history.push({ role: 'user', text: text });
-      history.push({ role: 'cat', text: reply });
-      localStorage.setItem(todayKey(), String(getCount() + 1));
-      updateLimit();
-    } catch (e) {
-      typing.remove();
-      addMsg('cat', 'مياو... يبدو إن الإنترنت ضعيف، جرب مرة ثانية.');
-    }
-    document.getElementById('sendBtn').disabled = false;
+    var all = document.querySelectorAll('.screen');
+    for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+    $(id).classList.add('active');
+    window.scrollTo(0, 0);
   }
 
-  (function init() {
-    var saved = localStorage.getItem('chatcat');
-    if (saved) {
-      try { cat = JSON.parse(saved); if (cat.name) { startChat(); } } catch (e) {}
+  function lsGet(k) {
+    try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; }
+  }
+  function lsSet(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  }
+
+  function currentAge() {
+    var years = Math.floor((Date.now() - cat.created) / 31557600000);
+    return (parseInt(cat.age, 10) || 1) + years;
+  }
+
+  function agree() {
+    lsSet('cc_agreed', true);
+    go('s3');
+  }
+
+  function saveCat() {
+    var n = $('catName').value.trim();
+    var a = parseInt($('catAge').value, 10);
+    if (!n) { alert('اكتب اسم القط أولاً'); return; }
+    if (!a || a < 1 || a > 100) { alert('اكتب عمراً بين 1 و 100'); return; }
+    cat = {
+      name: n,
+      age: a,
+      pers: $('catPers').value,
+      story: $('catStory').value.slice(0, 500),
+      look: '',
+      created: Date.now()
+    };
+    go('s4');
+  }
+
+  function pick(id, name) {
+    $('f1').classList.remove('selected');
+    $('f2').classList.remove('selected');
+    $(id).classList.add('selected');
+    cat.look = name;
+    $('finishBtn').disabled = false;
+  }
+
+  function finish() {
+    history = [];
+    lsSet('cc_cat', cat);
+    lsSet('cc_hist', history);
+    openChat();
+  }
+
+  function addBubble(role, text) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + (role === 'user' ? 'me' : 'cat');
+    d.textContent = text;
+    $('msgs').appendChild(d);
+    $('msgs').scrollTop = $('msgs').scrollHeight;
+    return d;
+  }
+
+  function openChat() {
+    $('chName').textContent = cat.name;
+    $('chInfo').textContent = currentAge() + ' سنة · ' + cat.look;
+    $('msgs').innerHTML = '';
+    if (history.length === 0) {
+      history.push({ role: 'cat', text: 'مياو! أنا ' + cat.name + '، سعيد بلقياك. كيف حالك اليوم؟' });
+      lsSet('cc_hist', history);
     }
-  })();
+    for (var i = 0; i < history.length; i++) addBubble(history[i].role, history[i].text);
+    go('s5');
+  }
+
+  function todayCount() {
+    var t = new Date().toDateString();
+    var s = lsGet('cc_day');
+    if (!s || s.d !== t) s = { d: t, n: 0 };
+    return s;
+  }
+
+  function finishReply(el, text, ok) {
+    el.textContent = text;
+    if (ok) {
+      history.push({ role: 'cat', text: text });
+      lsSet('cc_hist', history.slice(-40));
+    }
+    busy = false;
+    $('sendBtn').disabled = false;
+    $('msgs').scrollTop = $('msgs').scrollHeight;
+  }
+
+  function send() {
+    if (busy) return;
+    var text = $('inp').value.trim();
+    if (!text) return;
+
+    var day = todayCount();
+    if (day.n >= LIMIT) {
+      addBubble('cat', 'مياو... وصلنا الحد اليومي من الرسائل. نكمل بكرة، أو جرّب النسخة المميزة قريباً.');
+      return;
+    }
+    day.n++;
+    lsSet('cc_day', day);
+
+    var prior = history.slice(-20);
+    while (prior.length && prior[0].role === 'cat') prior.shift();
+
+    addBubble('user', text);
+    history.push({ role: 'user', text: text });
+    lsSet('cc_hist', history.slice(-40));
+    $('inp').value = '';
+    busy = true;
+    $('sendBtn').disabled = true;
+    var typing = addBubble('cat', '...');
+
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        cat: { name: cat.name, age: currentAge(), pers: cat.pers, story: cat.story },
+        history: prior
+      })
+    })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (d) {
+      finishReply(typing, d.reply || '...', true);
+    })
+    .catch(function (e) {
+      finishReply(typing, 'تعذر الاتصال بالخادم: ' + e.message, false);
+    });
+  }
+
+  function resetCat() {
+    if (!confirm('تبي تبدأ بقط جديد؟ بتنمسح المحادثة الحالية.')) return;
+    try {
+      localStorage.removeItem('cc_cat');
+      localStorage.removeItem('cc_hist');
+    } catch (e) {}
+    cat = null;
+    history = [];
+    $('catName').value = '';
+    $('catAge').value = '';
+    $('catStory').value = '';
+    $('f1').classList.remove('selected');
+    $('f2').classList.remove('selected');
+    $('finishBtn').disabled = true;
+    go('s3');
+  }
+
+  $('inp').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+  });
+
+  cat = lsGet('cc_cat');
+  history = lsGet('cc_hist') || [];
+  if (cat && cat.name) {
+    openChat();
+  } else if (lsGet('cc_agreed')) {
+    go('s3');
+  }
 </script>
 </body>
 </html>
-
